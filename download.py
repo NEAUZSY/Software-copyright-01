@@ -2,21 +2,22 @@ import os
 import time
 from datetime import datetime
 
-import requests
+
 import openpyxl as xl
 from lxml import etree
+from requests import get
 from utils.header import get_headers
 from multiprocessing import Queue, Process
 
 # 选择爬取的页数 默认为20
-PAGES = 5
+PAGES = 10
 # 是否在本地保存html文件
 SAVE_HTML = False
 
 BASE_URL = 'http://q.10jqka.com.cn/index/index/board/all/field/zdf/order/desc/page/{}/'
 
 
-def get(base_url, pages, is_save_html, q):
+def get_self(base_url, pages, is_save_html, q):
     # 获取请求头
     header = get_headers()
     # 判断本地是否已经存在之前爬取的网页
@@ -39,15 +40,17 @@ def get(base_url, pages, is_save_html, q):
                 url = base_url.format(i)
 
                 # 进行请求
-                resp = requests.get(url, headers=header)
-                # print(resp.status_cod)
-                # assert resp.status_code == 200
+                resp = get(url, headers=header)
+                while not resp.status_code == 200:
+                    print('请求失败,正在重新请求')
+                    time.sleep(0.5)
+                    resp = get(url, headers=header)
+                    pass
 
                 # 获取请求内容
                 html += resp.text
 
                 # 暂停一会反爬
-                # print('完成了{}页抓取'.format(i))
                 q.put(i)
                 time.sleep(0.1)
 
@@ -56,12 +59,12 @@ def get(base_url, pages, is_save_html, q):
         # 返回网页文件
     # 不保存html文件 爬取后直接解析并存储到excel中
     else:
-        for i in range(1, PAGES + 1):
+        for i in range(1, pages + 1):
             # 获取真正的url
             url = base_url.format(i)
 
             # 进行请求
-            resp = requests.get(url, headers=header)
+            resp = get(url, headers=header)
             # print(resp.status_cod)
             # assert resp.status_code == 200
 
@@ -120,8 +123,9 @@ def save_data(data):
     # print('保存成功')
 
 
-def main(is_save_html=SAVE_HTML, pages=PAGES, q=Queue):
-    html = get(BASE_URL, pages, is_save_html, q)
+def main(is_save_html, pages, q=Queue):
+    print(is_save_html, pages)
+    html = get_self(BASE_URL, pages, is_save_html, q)
     data = parse(html)
     save_data(data)
 
@@ -129,8 +133,6 @@ def main(is_save_html=SAVE_HTML, pages=PAGES, q=Queue):
 if __name__ == '__main__':
     queue = Queue(5)
     t1 = Process(target=main, args=(SAVE_HTML, PAGES, queue,))
-    t2 = Process(target=getfile, args=(queue,))
-
     t1.start()
-    t2.start()
+
 

@@ -1,14 +1,25 @@
+import os
 import time
+import base64
+
 import tkinter as tk
 import tkinter.ttk as ttk
-from request import main as r_main
+from download import main as r_main
 from multiprocessing import Process, Queue
+
+from icon import img
 
 
 class WIN(object):
     def __init__(self):
+
+        with open("./temp.ico", "wb+") as temp:
+            temp.write(base64.b64decode(img))
+
         self.queue = Queue(5)
         self.root = tk.Tk()
+        self.root.iconbitmap("./temp.ico")
+        # os.remove("temp.ico")
         self.root.title('股市信息抓取')
         screenwidth = self.root.winfo_screenwidth()  # 屏幕宽度
         screenheight = self.root.winfo_screenheight()  # 屏幕高度
@@ -22,7 +33,7 @@ class WIN(object):
         lb.place(x=20, y=20)
 
         # 要进行爬取的页数
-        self.page = tk.StringVar(value=5)
+        self.page = tk.StringVar(value=10)
 
         page_enter = tk.Entry(self.root, textvariable=self.page, bd=2, justify='center', width=4)
         page_enter.place(x=235, y=20)
@@ -45,6 +56,7 @@ class WIN(object):
         self.root.mainloop()
 
     def sign_out(self):
+        os.remove("temp.ico")
         self.root.destroy()
 
     def get(self):
@@ -61,6 +73,8 @@ class WIN(object):
 
 def get_process(q: Queue, pages):
     root = tk.Tk()
+    root.iconbitmap("./temp.ico")
+    # os.remove("temp.ico")
     root.title('执行进度')
     screenwidth = root.winfo_screenwidth()  # 屏幕宽度
     screenheight = root.winfo_screenheight()  # 屏幕高度
