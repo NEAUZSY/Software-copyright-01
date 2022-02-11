@@ -11,6 +11,7 @@ from multiprocessing import Queue, Process
 from icon import img
 from utils.log import log
 
+log('下载程序包引入完成')
 # 选择爬取的页数 默认为20
 PAGES = 10
 # 是否在本地保存html文件
@@ -48,13 +49,14 @@ def get_self(base_url, pages, is_save_html, q):
                 # 进行请求
                 resp = get(url, headers=header)
                 while not resp.status_code == 200:
-                    print('请求失败,正在重新请求')
+                    log('请求失败,正在重新请求')
                     time.sleep(0.5)
                     resp = get(url, headers=header)
                     pass
 
                 # 获取请求内容
                 html += resp.text
+                log('完成了{}页抓取'.format(i))
 
                 # 暂停一会反爬
                 q.put(i)
@@ -78,7 +80,7 @@ def get_self(base_url, pages, is_save_html, q):
             html += resp.text
 
             # 暂停一会反爬
-            print('完成了{}页抓取'.format(i))
+            log('完成了{}页抓取'.format(i))
             q.put(i)
             time.sleep(0.1)
     log('完成所有网页爬取')
@@ -141,7 +143,6 @@ def master(is_save_html, pages, q=Queue):
     html = get_self(BASE_URL, pages, is_save_html, q)
     data = parse(html)
     save_data(data)
-
 
 # if __name__ == '__main__':
 #     queue = Queue(5)

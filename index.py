@@ -6,17 +6,20 @@ import tkinter as tk
 import tkinter.ttk as ttk
 from datetime import datetime
 
-from download import master as r_main
+import download
 from multiprocessing import Process, Queue
 
 from icon import img
 from utils.log import log
 
-log('包引入完成')
+log('主程序包引入完成')
 
 
 class WIN(object):
     def __init__(self):
+
+        self.loop = True
+
         with open("./temp.ico", "wb+") as temp:
             temp.write(base64.b64decode(img))
         log('创建临时icon文件')
@@ -59,12 +62,15 @@ class WIN(object):
 
         log('主窗口开始运行')
 
+        self.root.protocol("WM_DELETE_WINDOW", self.sign_out)
+
         self.root.mainloop()
 
     def sign_out(self):
         os.remove("temp.ico")
         log('删除临时icon文件')
         self.root.destroy()
+        self.loop = False
         log('退出 关闭主窗口')
 
     def get(self):
@@ -73,13 +79,22 @@ class WIN(object):
         is_save = int(self.is_save_html.get())
 
         log('设置多进程')
-        get_data = Process(target=r_main, args=(is_save, page_num, self.queue,))
+        get_data = Process(target=download.master, args=(is_save, page_num, self.queue,))
         display = Process(target=get_process, args=(self.queue, page_num,))
 
         log('开始下载')
         get_data.start()
         log('开始更新')
         display.start()
+
+        self.root.destroy()
+        log('关闭主窗口')
+
+        log('阻塞主程序')
+        get_data.join()
+        display.join()
+
+        log('主程序继续')
 
 
 def get_process(q: Queue, pages):
@@ -122,8 +137,11 @@ def get_process(q: Queue, pages):
 
 
 def main():
-    log('进入主程序')
-    win = WIN()
+    loop = True
+    while loop:
+        log('进入主程序')
+        win = WIN()
+        loop = win.loop
 
 
 if __name__ == '__main__':
