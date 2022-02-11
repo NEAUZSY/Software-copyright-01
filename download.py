@@ -2,12 +2,14 @@ import os
 import time
 from datetime import datetime
 
-
 import openpyxl as xl
 from lxml import etree
 from requests import get
 from utils.header import get_headers
 from multiprocessing import Queue, Process
+
+from icon import img
+from utils.log import log
 
 # 选择爬取的页数 默认为20
 PAGES = 10
@@ -16,17 +18,21 @@ SAVE_HTML = False
 
 BASE_URL = 'http://q.10jqka.com.cn/index/index/board/all/field/zdf/order/desc/page/{}/'
 
+log('全局变量及包声明完成')
+
 
 def get_self(base_url, pages, is_save_html, q):
     # 获取请求头
+    log('获取请求头')
     header = get_headers()
     # 判断本地是否已经存在之前爬取的网页
+    log('判断本地是否已经存在之前爬取的网页')
     current_time = datetime.now().strftime('%Y-%m-%d-%H时%M分%S秒')
     html = ''
     # 保存爬取的源网页文件
     # print(is_save_html)
     if is_save_html:
-        print('保存原网页')
+        log('保存原网页')
         html_name = 'stock-{}.html'.format(current_time)
 
         if os.path.exists(html_name):
@@ -72,13 +78,15 @@ def get_self(base_url, pages, is_save_html, q):
             html += resp.text
 
             # 暂停一会反爬
-            # print('完成了{}页抓取'.format(i))
+            print('完成了{}页抓取'.format(i))
             q.put(i)
             time.sleep(0.1)
+    log('完成所有网页爬取')
     return html
 
 
 def parse(html):
+    log('开始解析')
     # 创建根节点
     root_node = etree.HTML(html)
     # 找到今日个股行情信息
@@ -94,11 +102,13 @@ def parse(html):
             row.append(str(tr.xpath(target)[0]))
         data.append(row)
     # print(data)
+    log('解析完成')
     return data
 
 
 def save_data(data):
     # 获取当前日期
+    log('储存信息到xlsx文件')
     current_time = datetime.now().strftime('%Y-%m-%d-%H时%M分%S秒')
     # date = current_time[:10]
 
@@ -107,9 +117,11 @@ def save_data(data):
     # 判断本地是否已经存在文件
     if os.path.exists(book_name):
         # 如果已经存在之前爬取的网页便将其赋值给html
+        log('如果已经存在之前爬取的网页便将其赋值给html')
         wb = xl.load_workbook(filename=book_name)
         ws = wb.create_sheet(title=current_time)
     else:
+        log('本地没有数据文件则新建')
         wb = xl.Workbook()
         ws = wb.active
         ws.title = current_time
@@ -117,14 +129,15 @@ def save_data(data):
     title = ['序号', '代码', '名称', '现价', '涨跌幅（%）', '涨跌', '涨速（%）',
              '换手（%）', '量比', '振幅（%）', '成交额', '流通股', '流通市值', '市盈率']
     ws.append(title)
+    log('开始保存文件')
     for row in data:
         ws.append(row)
     wb.save(book_name)
+    log('保存完成')
     # print('保存成功')
 
 
-def main(is_save_html, pages, q=Queue):
-    print(is_save_html, pages)
+def master(is_save_html, pages, q=Queue):
     html = get_self(BASE_URL, pages, is_save_html, q)
     data = parse(html)
     save_data(data)
@@ -132,7 +145,5 @@ def main(is_save_html, pages, q=Queue):
 
 if __name__ == '__main__':
     queue = Queue(5)
-    t1 = Process(target=main, args=(SAVE_HTML, PAGES, queue,))
+    t1 = Process(target=master, args=(SAVE_HTML, PAGES, queue,))
     t1.start()
-
-

@@ -4,17 +4,22 @@ import base64
 
 import tkinter as tk
 import tkinter.ttk as ttk
-from download import main as r_main
+from datetime import datetime
+
+from download import master as r_main
 from multiprocessing import Process, Queue
 
 from icon import img
+from utils.log import log
+
+log('包引入完成')
 
 
 class WIN(object):
     def __init__(self):
-
         with open("./temp.ico", "wb+") as temp:
             temp.write(base64.b64decode(img))
+        log('创建临时icon文件')
 
         self.queue = Queue(5)
         self.root = tk.Tk()
@@ -28,6 +33,7 @@ class WIN(object):
         x = int((screenwidth - width) / 2)
         y = int((screenheight - height) / 2)
         self.root.geometry('{}x{}+{}+{}'.format(width, height, x, y))  # 大小以及位置
+        log('主窗口初始化完毕')
 
         lb = tk.Label(self.root, text='请输入要抓取的股票信息页数（<250)')
         lb.place(x=20, y=20)
@@ -51,27 +57,32 @@ class WIN(object):
         btn_start = tk.Button(self.root, text='开始收集数据', command=self.get)
         btn_start.place(x=200, y=100)
 
-        self.root.after(10, )
+        log('主窗口开始运行')
 
         self.root.mainloop()
 
     def sign_out(self):
         os.remove("temp.ico")
+        log('删除临时icon文件')
         self.root.destroy()
+        log('退出 关闭主窗口')
 
     def get(self):
         # 获取参数值
         page_num = int(self.page.get())
         is_save = int(self.is_save_html.get())
 
+        log('设置多进程')
         get_data = Process(target=r_main, args=(is_save, page_num, self.queue,))
         display = Process(target=get_process, args=(self.queue, page_num,))
 
+        log('开始多进程')
         get_data.start()
         display.start()
 
 
 def get_process(q: Queue, pages):
+    log('创建进度窗口')
     root = tk.Tk()
     root.iconbitmap("./temp.ico")
     # os.remove("temp.ico")
@@ -92,6 +103,7 @@ def get_process(q: Queue, pages):
     progressbar['maximum'] = pages
     progressbar.place(x=85, y=50)
 
+    log('开始更新进度信息')
     while True:
         try:
             page = int(q.get(timeout=2))
@@ -105,9 +117,11 @@ def get_process(q: Queue, pages):
             # print('全部保存完毕')
             break
     root.destroy()
+    log('关闭进度窗口')
 
 
 def main():
+    log('进入主程序')
     win = WIN()
 
 
