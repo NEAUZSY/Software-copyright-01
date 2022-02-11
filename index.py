@@ -76,8 +76,9 @@ class WIN(object):
         get_data = Process(target=r_main, args=(is_save, page_num, self.queue,))
         display = Process(target=get_process, args=(self.queue, page_num,))
 
-        log('开始多进程')
+        log('开始下载')
         get_data.start()
+        log('开始更新')
         display.start()
 
 

@@ -143,7 +143,7 @@ def master(is_save_html, pages, q=Queue):
     save_data(data)
 
 
-if __name__ == '__main__':
-    queue = Queue(5)
-    t1 = Process(target=master, args=(SAVE_HTML, PAGES, queue,))
-    t1.start()
+# if __name__ == '__main__':
+#     queue = Queue(5)
+#     t1 = Process(target=master, args=(SAVE_HTML, PAGES, queue,))
+#     t1.start()
