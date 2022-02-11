@@ -2,7 +2,10 @@ import time
 import tkinter as tk
 import tkinter.ttk as ttk
 from request import main as r_main
+from request import getfile
 from multiprocessing import Process, Queue
+
+global win
 
 
 class WIN(object):
@@ -27,12 +30,13 @@ class WIN(object):
         page_enter = tk.Entry(self.root, textvariable=self.page, bd=2, justify='center', width=4)
         page_enter.place(x=235, y=20)
 
-        self.is_save_html = tk.StringVar(value=0)
+        self.is_save_html = tk.StringVar(value=False)
 
-        save_html = tk.Radiobutton(self.root, text='生成HTML文件', variable=self.is_save_html, value=1)
+        save_html = tk.Radiobutton(self.root, text='生成HTML文件', variable=self.is_save_html, value=True)
         save_html.place(x=50, y=60)
-        not_save_html = tk.Radiobutton(self.root, text='不生成HTML文件', variable=self.is_save_html, value=0)
+        not_save_html = tk.Radiobutton(self.root, text='不生成HTML文件', variable=self.is_save_html, value=False)
         not_save_html.place(x=130, y=60)
+
 
         btn_quit = tk.Button(self.root, text='退出', command=self.sign_out)
         btn_quit.place(x=50, y=100)
@@ -50,7 +54,7 @@ class WIN(object):
     def get(self):
         # 获取参数值
         page_num = int(self.page.get())
-        is_save = int(self.is_save_html.get())
+        is_save = bool(self.is_save_html.get())
 
         get_data = Process(target=r_main, args=(is_save, page_num, self.queue,))
         display = Process(target=get_process, args=(self.queue, page_num,))
@@ -65,35 +69,32 @@ def get_process(q: Queue, pages):
     screenwidth = root.winfo_screenwidth()  # 屏幕宽度
     screenheight = root.winfo_screenheight()  # 屏幕高度
     width = 300
-    height = 100
+    height = 200
     x = int((screenwidth - width) / 2)
     y = int((screenheight - height) / 2)
     root.geometry('{}x{}+{}+{}'.format(width, height, x, y))  # 大小以及位置
 
-    tk.Label(root, text='下载进度:', ).place(x=20, y=50)
-
-    process = tk.StringVar(value='当前进度:')
-    tk.Label(root, textvariable=process).place(x=20, y=20)
+    tk.Label(root, text='下载进度:', ).place(x=20, y=100)
     progressbar = ttk.Progressbar(root, length=200)
     progressbar['maximum'] = pages
-    progressbar.place(x=85, y=50)
+    progressbar.place(x=85, y=100)
 
     while True:
         try:
             page = int(q.get(timeout=2))
-            # print('当前进度{}/{}'.format(page, pages))
+            print('当前进度{}/{}'.format(page, pages))
             progressbar['value'] = page
-            process.set('当前进度{}/{}'.format(page, pages))
             root.update()
             time.sleep(0.02)
         except Exception as e:
             print(e)
-            # print('全部保存完毕')
+            print('全部保存完毕')
             break
     root.destroy()
 
 
 def main():
+    global win
     win = WIN()
 
 

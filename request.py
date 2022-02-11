@@ -6,23 +6,26 @@ import requests
 import openpyxl as xl
 from lxml import etree
 from utils.header import get_headers
+from multiprocessing import Queue, Process
 
 # 选择爬取的页数 默认为20
-PAGES = 20
+PAGES = 5
 # 是否在本地保存html文件
 SAVE_HTML = False
 
 BASE_URL = 'http://q.10jqka.com.cn/index/index/board/all/field/zdf/order/desc/page/{}/'
 
 
-def get(base_url):
+def get(base_url, pages, is_save_html, q):
     # 获取请求头
     header = get_headers()
     # 判断本地是否已经存在之前爬取的网页
     current_time = datetime.now().strftime('%Y-%m-%d-%H时%M分%S秒')
     html = ''
     # 保存爬取的源网页文件
-    if SAVE_HTML:
+    # print(is_save_html)
+    if is_save_html:
+        print('保存原网页')
         html_name = 'stock-{}.html'.format(current_time)
 
         if os.path.exists(html_name):
@@ -31,7 +34,7 @@ def get(base_url):
                 html = f.read()
         else:
             # 否则在网络上进行爬取，并存储在html变量中
-            for i in range(1, PAGES + 1):
+            for i in range(1, pages + 1):
                 # 获取真正的url
                 url = base_url.format(i)
 
@@ -44,7 +47,8 @@ def get(base_url):
                 html += resp.text
 
                 # 暂停一会反爬
-                print('完成了{}页抓取'.format(i))
+                # print('完成了{}页抓取'.format(i))
+                q.put(i)
                 time.sleep(0.1)
 
             with open(html_name, 'w', encoding='GBK') as f:
@@ -65,16 +69,17 @@ def get(base_url):
             html += resp.text
 
             # 暂停一会反爬
-            print('完成了{}页抓取'.format(i))
+            # print('完成了{}页抓取'.format(i))
+            q.put(i)
             time.sleep(0.1)
     return html
 
 
 def parse(html):
     # 创建根节点
-    root = etree.HTML(html)
+    root_node = etree.HTML(html)
     # 找到今日个股行情信息
-    tbody = root.xpath('//table/tbody/tr')
+    tbody = root_node.xpath('//table/tbody/tr')
     data = []
     for tr in tbody:
         # 初始化每一行的列表
@@ -112,14 +117,20 @@ def save_data(data):
     for row in data:
         ws.append(row)
     wb.save(book_name)
-    print('保存成功')
+    # print('保存成功')
 
 
-def main():
-    html = get(BASE_URL)
+def main(is_save_html=SAVE_HTML, pages=PAGES, q=Queue):
+    html = get(BASE_URL, pages, is_save_html, q)
     data = parse(html)
     save_data(data)
 
 
 if __name__ == '__main__':
-    main()
+    queue = Queue(5)
+    t1 = Process(target=main, args=(SAVE_HTML, PAGES, queue,))
+    t2 = Process(target=getfile, args=(queue,))
+
+    t1.start()
+    t2.start()
+
