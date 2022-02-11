@@ -8,7 +8,7 @@ import tkinter.ttk as ttk
 from datetime import datetime
 
 import download
-from multiprocessing import Process, Queue
+from multiprocessing import Process, Queue, freeze_support
 
 from icon import img
 from utils.log import log
@@ -182,4 +182,5 @@ def main():
 
 
 if __name__ == '__main__':
+    freeze_support()
     main()
