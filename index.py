@@ -1,6 +1,7 @@
 import os
 import time
 import base64
+import sys
 
 import tkinter as tk
 import tkinter.ttk as ttk
@@ -11,6 +12,39 @@ from multiprocessing import Process, Queue
 
 from icon import img
 from utils.log import log
+
+try:
+    # Python 3.4+
+    if sys.platform.startswith('win'):
+        import multiprocessing.popen_spawn_win32 as forking
+    else:
+        import multiprocessing.popen_fork as forking
+except ImportError:
+    import multiprocessing.forking as forking
+
+if sys.platform.startswith('win'):
+    # First define a modified version of Popen.
+    class _Popen(forking.Popen):
+        def __init__(self, *args, **kw):
+            if hasattr(sys, 'frozen'):
+                # We have to set original _MEIPASS2 value from sys._MEIPASS
+                # to get --onefile mode working.
+                os.putenv('_MEIPASS2', sys._MEIPASS)
+            try:
+                super(_Popen, self).__init__(*args, **kw)
+            finally:
+                if hasattr(sys, 'frozen'):
+                    # On some platforms (e.g. AIX) 'os.unsetenv()' is not
+                    # available. In those cases we cannot delete the variable
+                    # but only set it to the empty string. The bootloader
+                    # can handle this case.
+                    if hasattr(os, 'unsetenv'):
+                        os.unsetenv('_MEIPASS2')
+                    else:
+                        os.putenv('_MEIPASS2', '')
+
+    # Second override 'Popen' class with our modified version.
+    forking.Popen = _Popen
 
 log('主程序包引入完成')
 
@@ -67,8 +101,11 @@ class WIN(object):
         self.root.mainloop()
 
     def sign_out(self):
-        os.remove("temp.ico")
-        log('删除临时icon文件')
+        try:
+            os.remove("temp.ico")
+            log('删除临时icon文件')
+        except Exception as e:
+            print(e)
         self.root.destroy()
         self.loop = False
         log('退出 关闭主窗口')
